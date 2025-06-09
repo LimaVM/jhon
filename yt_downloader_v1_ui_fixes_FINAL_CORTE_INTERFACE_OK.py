@@ -368,8 +368,9 @@ def parse_tracklist(tracklist_text_content):
         else:
             log(f"Formato inválido ou não reconhecido na linha {i+1}: 	'{line}'.", "WARNING")
 
-    # Ordena as faixas pelo tempo inicial
-    # tracks.sort(key=lambda x: x["start_seconds"])  # ORDEM PRESERVADA
+    # Ordena as faixas pelo tempo inicial para evitar cortes incorretos caso a
+    # lista seja fornecida fora de ordem. Mantemos o nome e outros dados.
+    tracks.sort(key=lambda x: x["start_seconds"])
 
     # Calcula o tempo final (início da próxima faixa)
     for i in range(len(tracks)):
