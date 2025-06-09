@@ -2,7 +2,16 @@ import os
 import sys
 import subprocess
 import tkinter as tk
-from tkinter import ttk, messagebox, Menu, Frame, Label, Text, Scrollbar, Toplevel, Checkbutton, IntVar, filedialog, LabelFrame, Radiobutton, StringVar
+from tkinter import (
+    ttk,
+    messagebox,
+    Menu,
+    Text,
+    Toplevel,
+    IntVar,
+    filedialog,
+    StringVar,
+)
 import threading
 import shutil
 import re
@@ -388,44 +397,59 @@ def sanitize_filename(filename):
     sanitized = sanitized.rstrip('.') 
     return sanitized[:200] # Limita tamanho
 def format_time_input(time_str):
-    if not time_str: return ""
+    if not time_str:
+        return ""
     digits = re.sub(r'[^0-9]', '', time_str)
-    while len(digits) < 6: digits = '0' + digits
-    if len(digits) > 6: digits = digits[-6:]
+    while len(digits) < 6:
+        digits = "0" + digits
+    if len(digits) > 6:
+        digits = digits[-6:]
     return f"{digits[0:2]}:{digits[2:4]}:{digits[4:6]}"
 
 def get_time_description(time_str):
-    if not time_str: return ""
+    if not time_str:
+        return ""
     try:
-        parts = time_str.split(':')
-        if len(parts) != 3: return ""
+        parts = time_str.split(":")
+        if len(parts) != 3:
+            return ""
         h, m, s = int(parts[0]), int(parts[1]), int(parts[2])
         desc = []
-        if h > 0: desc.append(f"{h} hora{'s' if h > 1 else ''}")
-        if m > 0: desc.append(f"{m} minuto{'s' if m > 1 else ''}")
-        if s > 0 or (h == 0 and m == 0): desc.append(f"{s} segundo{'s' if s > 1 else ''}")
+        if h > 0:
+            desc.append(f"{h} hora{'s' if h > 1 else ''}")
+        if m > 0:
+            desc.append(f"{m} minuto{'s' if m > 1 else ''}")
+        if s > 0 or (h == 0 and m == 0):
+            desc.append(f"{s} segundo{'s' if s > 1 else ''}")
         return " e ".join(desc)
-    except: return ""
+    except Exception:
+        return ""
 
 def format_datetime(iso_date_str):
     try:
         dt = datetime.fromisoformat(iso_date_str)
         return dt.strftime("%d/%m/%Y %H:%M:%S")
-    except: return iso_date_str
+    except Exception:
+        return iso_date_str
 
 def update_time_labels(*args):
     start_value = start_entry.get().strip()
     if start_value:
         formatted_start = format_time_input(start_value)
-        start_entry.delete(0, tk.END); start_entry.insert(0, formatted_start)
+        start_entry.delete(0, tk.END)
+        start_entry.insert(0, formatted_start)
         start_label_desc.config(text=get_time_description(formatted_start))
-    else: start_label_desc.config(text="")
+    else:
+        start_label_desc.config(text="")
+
     end_value = end_entry.get().strip()
     if end_value:
         formatted_end = format_time_input(end_value)
-        end_entry.delete(0, tk.END); end_entry.insert(0, formatted_end)
+        end_entry.delete(0, tk.END)
+        end_entry.insert(0, formatted_end)
         end_label_desc.config(text=get_time_description(formatted_end))
-    else: end_label_desc.config(text="")
+    else:
+        end_label_desc.config(text="")
 
 def open_download_folder():
     global last_download_path
@@ -466,7 +490,8 @@ def check_ytdlp_dependency(): # Renomeada para clareza
 # --- Funções Principais de Download e Processamento --- #
 
 def get_video_title(url):
-    if not check_ytdlp_dependency(): return None
+    if not check_ytdlp_dependency():
+        return None
     try:
         command = [YTDLP_PATH, '--get-title', '--no-warnings', url]
         startupinfo = None
@@ -486,7 +511,8 @@ def get_video_title(url):
         return None
 
 def get_video_duration(file_path):
-    if not check_ffmpeg_dependency(): return None
+    if not check_ffmpeg_dependency():
+        return None
     try:
         command = [
             FFMPEG_PATH, '-i', file_path,
@@ -513,7 +539,8 @@ def get_video_duration(file_path):
         return None
 
 def download_thumbnail(url, save_path):
-    if not check_ytdlp_dependency(): return None
+    if not check_ytdlp_dependency():
+        return None
     if not REQUESTS_AVAILABLE:
         log("Biblioteca 'requests' não disponível para baixar miniatura.", "ERROR")
         return None
@@ -616,15 +643,21 @@ def add_metadata_to_mp3(mp3_path, title, thumbnail_path):
 
 def download_video_thread(url, format_choice, quality_choice, start_time, end_time):
     global last_download_path
-    if not check_ytdlp_dependency(): return
-    if (start_time or end_time) and not check_ffmpeg_dependency(): return
+    if not check_ytdlp_dependency():
+        return
+    if (start_time or end_time) and not check_ffmpeg_dependency():
+        return
 
     log(f"Iniciando download: {url} (Formato: {format_choice}, Qualidade: {quality_choice})", "INFO")
     # Desabilita botões na UI principal
-    if download_button.winfo_exists(): download_button.config(state=tk.DISABLED)
-    if playlist_button.winfo_exists(): playlist_button.config(state=tk.DISABLED)
-    if open_folder_button.winfo_exists(): open_folder_button.config(state=tk.DISABLED)
-    if progress_bar.winfo_exists(): progress_bar.start(10)
+    if download_button.winfo_exists():
+        download_button.config(state=tk.DISABLED)
+    if playlist_button.winfo_exists():
+        playlist_button.config(state=tk.DISABLED)
+    if open_folder_button.winfo_exists():
+        open_folder_button.config(state=tk.DISABLED)
+    if progress_bar.winfo_exists():
+        progress_bar.start(10)
 
     try:
         # 1. Obter título
@@ -717,7 +750,8 @@ def download_video_thread(url, format_choice, quality_choice, start_time, end_ti
         # 6. Processamento Pós-Download (Corte com FFmpeg)
         if start_time or end_time:
             log("Iniciando corte com FFmpeg...", "INFO")
-            if not check_ffmpeg_dependency(): raise Exception("FFmpeg não encontrado para corte.")
+            if not check_ffmpeg_dependency():
+                raise Exception("FFmpeg não encontrado para corte.")
 
             ffmpeg_command = [FFMPEG_PATH, '-y'] # -y para sobrescrever sem perguntar
 
@@ -808,10 +842,14 @@ def download_video_thread(url, format_choice, quality_choice, start_time, end_ti
 
     finally:
         # Reabilita botões e para barra de progresso
-        if download_button.winfo_exists(): download_button.config(state=tk.NORMAL)
-        if playlist_button.winfo_exists(): playlist_button.config(state=tk.NORMAL)
-        if open_folder_button.winfo_exists(): open_folder_button.config(state=tk.NORMAL)
-        if progress_bar.winfo_exists(): progress_bar.stop()
+        if download_button.winfo_exists():
+            download_button.config(state=tk.NORMAL)
+        if playlist_button.winfo_exists():
+            playlist_button.config(state=tk.NORMAL)
+        if open_folder_button.winfo_exists():
+            open_folder_button.config(state=tk.NORMAL)
+        if progress_bar.winfo_exists():
+            progress_bar.stop()
 
 def start_download():
     url = url_entry.get().strip()
@@ -860,7 +898,8 @@ def start_download():
 # --- Funções da Janela de Playlist --- #
 
 def fetch_playlist_info(url):
-    if not check_ytdlp_dependency(): return None
+    if not check_ytdlp_dependency():
+        return None
     log(f"Obtendo informações da playlist: {url}", "INFO")
     playlist_info_label.config(text="Buscando vídeos da playlist...")
     root.update_idletasks()
@@ -922,7 +961,7 @@ def populate_playlist_listbox(videos):
             cb.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5, pady=2)
             # Aplica o tema ao Checkbutton e ao Frame
             style.configure("ListboxItem.TFrame", background=THEME_COLORS["frame"]) # Cor de fundo do item
-            style.configure(f"TCheckbutton", background=THEME_COLORS["frame"], foreground=THEME_COLORS["foreground"])
+            style.configure("TCheckbutton", background=THEME_COLORS["frame"], foreground=THEME_COLORS["foreground"])
 
             playlist_listbox.insert(tk.END, "") # Placeholder para o frame
             playlist_listbox.window_create(tk.END, window=item_frame)
@@ -1191,8 +1230,13 @@ def open_folder_path(folder_path):
     """Abre uma pasta específica no explorador."""
     try:
         if os.path.exists(folder_path):
-            if os.name == 'nt': os.startfile(folder_path)
-            else: subprocess.run(['open' if sys.platform == 'darwin' else 'xdg-open', folder_path], check=True)
+            if os.name == "nt":
+                os.startfile(folder_path)
+            else:
+                subprocess.run(
+                    ["open" if sys.platform == "darwin" else "xdg-open", folder_path],
+                    check=True,
+                )
             log(f"Abrindo pasta: {folder_path}", "INFO")
         else:
             log(f"Pasta não encontrada: {folder_path}", "WARNING")
@@ -1227,8 +1271,10 @@ def remove_specific_history_item(index):
 
 def clear_history_action(filter_type):
     confirm_msg = "Tem certeza que deseja limpar TODO o histórico? Esta ação não pode ser desfeita."
-    if filter_type == "1hour": confirm_msg = "Tem certeza que deseja limpar o histórico da última hora?"
-    elif filter_type == "1day": confirm_msg = "Tem certeza que deseja limpar o histórico do último dia?"
+    if filter_type == "1hour":
+        confirm_msg = "Tem certeza que deseja limpar o histórico da última hora?"
+    elif filter_type == "1day":
+        confirm_msg = "Tem certeza que deseja limpar o histórico do último dia?"
 
     response = messagebox.askyesno("Confirmar Limpeza", confirm_msg)
     if response:
@@ -1345,16 +1391,31 @@ def apply_theme_to_widget(widget):
         style.configure("TLabelframe.Label", background=widget_bg, foreground=widget_fg)
 
         # Configurações específicas para widgets tk
-        if isinstance(widget, tk.Listbox): widget.configure(bg=THEME_COLORS["frame"], fg=widget_fg, selectbackground=THEME_COLORS["highlight"], selectforeground=THEME_COLORS["highlight_fg"])
-        if isinstance(widget, tk.Text): widget.configure(bg=THEME_COLORS["log_bg"], fg=widget_fg)
-        if isinstance(widget, tk.Menu): widget.configure(bg=THEME_COLORS["button"], fg=THEME_COLORS["button_fg"], activebackground=THEME_COLORS["highlight"], activeforeground=THEME_COLORS["highlight_fg"], disabledforeground=disabled_fg)
-        if isinstance(widget, tk.LabelFrame): widget.configure(bg=widget_bg, fg=widget_fg)
+        if isinstance(widget, tk.Listbox):
+            widget.configure(
+                bg=THEME_COLORS["frame"],
+                fg=widget_fg,
+                selectbackground=THEME_COLORS["highlight"],
+                selectforeground=THEME_COLORS["highlight_fg"],
+            )
+        if isinstance(widget, tk.Text):
+            widget.configure(bg=THEME_COLORS["log_bg"], fg=widget_fg)
+        if isinstance(widget, tk.Menu):
+            widget.configure(
+                bg=THEME_COLORS["button"],
+                fg=THEME_COLORS["button_fg"],
+                activebackground=THEME_COLORS["highlight"],
+                activeforeground=THEME_COLORS["highlight_fg"],
+                disabledforeground=disabled_fg,
+            )
+        if isinstance(widget, tk.LabelFrame):
+            widget.configure(bg=widget_bg, fg=widget_fg)
 
         # Aplica recursivamente aos filhos
         for child in widget.winfo_children():
             apply_theme_to_widget(child)
 
-    except tk.TclError as e:
+    except tk.TclError:
         # Ignora erros de widgets que não suportam certas configurações
         pass
     except Exception as e:
@@ -1607,10 +1668,13 @@ def run_spleeter_thread(input_path):
         log("Tentativa de usar Spleeter, mas não está disponível.", "ERROR")
         messagebox.showerror("Spleeter Indisponível", "A funcionalidade de remoção de guitarra não está disponível.\nVerifique a instalação do Spleeter e se o comando está no PATH.")
         # Garante que o botão e status sejam atualizados
-        if spleeter_button.winfo_exists(): spleeter_button.config(state=tk.DISABLED)
-        if spleeter_status_label.winfo_exists(): spleeter_status_label.config(text="Spleeter indisponível", foreground="red")
+        if spleeter_button.winfo_exists():
+            spleeter_button.config(state=tk.DISABLED)
+        if spleeter_status_label.winfo_exists():
+            spleeter_status_label.config(text="Spleeter indisponível", foreground="red")
         return
-    if not check_ffmpeg_dependency(): return # FFmpeg também é necessário para combinar
+    if not check_ffmpeg_dependency():
+        return  # FFmpeg também é necessário para combinar
 
     if not input_path or not os.path.exists(input_path):
         log("Arquivo de entrada inválido para Spleeter.", "ERROR")
@@ -1622,8 +1686,10 @@ def run_spleeter_thread(input_path):
     spleeter_status_label.config(text="Processando com Spleeter...")
     # Limpa pasta de saída anterior?
     if os.path.exists(SPLEETER_OUTPUT_DIR):
-        try: shutil.rmtree(SPLEETER_OUTPUT_DIR)
-        except Exception as e: log(f"Erro ao limpar pasta Spleeter antiga: {e}", "WARNING")
+        try:
+            shutil.rmtree(SPLEETER_OUTPUT_DIR)
+        except Exception as e:
+            log(f"Erro ao limpar pasta Spleeter antiga: {e}", "WARNING")
     os.makedirs(SPLEETER_OUTPUT_DIR, exist_ok=True)
 
     try:
@@ -1659,9 +1725,12 @@ def run_spleeter_thread(input_path):
 
             # Verifica se os arquivos existem
             stems_to_combine = []
-            if os.path.exists(vocals_path): stems_to_combine.append(vocals_path)
-            if os.path.exists(bass_path): stems_to_combine.append(bass_path)
-            if os.path.exists(drums_path): stems_to_combine.append(drums_path)
+            if os.path.exists(vocals_path):
+                stems_to_combine.append(vocals_path)
+            if os.path.exists(bass_path):
+                stems_to_combine.append(bass_path)
+            if os.path.exists(drums_path):
+                stems_to_combine.append(drums_path)
 
             if len(stems_to_combine) < 1:
                  log("Nenhum stem (vocal, baixo, bateria) encontrado após processamento Spleeter.", "ERROR")
@@ -1671,7 +1740,8 @@ def run_spleeter_thread(input_path):
             output_no_guitar_filename = f"{output_base}_sem_guitarra.mp3" # Salvar como MP3
             output_no_guitar_path = os.path.join(PROCESSED_DIR, output_no_guitar_filename)
 
-            if not check_ffmpeg_dependency(): raise Exception("FFmpeg necessário para combinar stems.")
+            if not check_ffmpeg_dependency():
+                raise Exception("FFmpeg necessário para combinar stems.")
 
             ffmpeg_combine_cmd = [FFMPEG_PATH, '-y']
             for stem_path in stems_to_combine:
@@ -1718,7 +1788,8 @@ def start_spleeter_processing():
     run_in_thread(run_spleeter_thread, args=(input_path,))
 
 def split_video_for_stories_thread(input_path, segment_duration):
-    if not check_ffmpeg_dependency(): return
+    if not check_ffmpeg_dependency():
+        return
     if not input_path or not os.path.exists(input_path):
         log("Arquivo de entrada inválido para divisão.", "ERROR")
         messagebox.showerror("Erro Divisão", "Selecione um arquivo de vídeo válido primeiro.")
@@ -2126,9 +2197,12 @@ part_progress_bar.stop() # Inicia parada
 def download_and_split_thread(url, tracks, output_format):
     log(f"Iniciando download e divisão por faixas para: {url} (Formato: {output_format.upper()})", "HIGHLIGHT")
     # Desabilita botão e inicia progresso
-    if part_download_button.winfo_exists(): part_download_button.config(state=tk.DISABLED)
-    if part_status_label.winfo_exists(): part_status_label.config(text=f"Iniciando download ({output_format.upper()})...")
-    if part_progress_bar.winfo_exists(): part_progress_bar.start(10)
+    if part_download_button.winfo_exists():
+        part_download_button.config(state=tk.DISABLED)
+    if part_status_label.winfo_exists():
+        part_status_label.config(text=f"Iniciando download ({output_format.upper()})...")
+    if part_progress_bar.winfo_exists():
+        part_progress_bar.start(10)
 
     global last_download_path # Para abrir a pasta depois
 
@@ -2158,9 +2232,11 @@ def download_and_split_thread(url, tracks, output_format):
         temp_filename = f"{sanitized_video_title}_full_temp.{output_format}"
         temp_filepath = os.path.join(PROCESSED_DIR, temp_filename) # Salva temporário em Processed
         log(f"Baixando arquivo completo ({output_format.upper()}) para: {temp_filepath}", "INFO")
-        if part_status_label.winfo_exists(): part_status_label.config(text=f"Baixando ({output_format.upper()})...")
+        if part_status_label.winfo_exists():
+            part_status_label.config(text=f"Baixando ({output_format.upper()})...")
 
-        if not check_ytdlp_dependency(): raise Exception("yt-dlp não encontrado.")
+        if not check_ytdlp_dependency():
+            raise Exception("yt-dlp não encontrado.")
 
         ytdlp_command = [YTDLP_PATH, '--no-warnings', '--progress']
 
@@ -2202,7 +2278,8 @@ def download_and_split_thread(url, tracks, output_format):
             log(f"Download do arquivo completo ({output_format.upper()}) concluído com sucesso.", "SUCCESS")
 
         # 4. Dividir o arquivo usando FFmpeg
-        if not check_ffmpeg_dependency(): raise Exception(f"FFmpeg não encontrado para dividir o arquivo.")
+        if not check_ffmpeg_dependency():
+            raise Exception("FFmpeg não encontrado para dividir o arquivo.")
 
         total_tracks = len(tracks)
         errors = 0
@@ -2239,7 +2316,7 @@ def download_and_split_thread(url, tracks, output_format):
                 else:
                     log(f"  [WARN] Tempo final ({end_sec}) não é maior que o inicial ({start_sec}) para a faixa {track_num}. Pulando definição de tempo final/duração.", "WARNING")
             else:
-                 log(f"  [DEBUG] Tempo final não definido (end_sec is None), FFmpeg cortará até o fim.", "INFO") # DEBUG LOG
+                 log("  [DEBUG] Tempo final não definido (end_sec is None), FFmpeg cortará até o fim.", "INFO") # DEBUG LOG
             # Se end_sec for None ou inválido, FFmpeg cortará até o final do arquivo
 
             # Define codecs e metadados baseados no formato
@@ -2291,7 +2368,8 @@ def download_and_split_thread(url, tracks, output_format):
                 if output_format == "mp3" and MUTAGEN_AVAILABLE:
                     try:
                         audio = MP3(output_track_filepath, ID3=ID3)
-                        if audio.tags is None: audio.add_tags()
+                        if audio.tags is None:
+                            audio.add_tags()
                         audio.tags.add(TIT2(encoding=3, text=track_name)) # Título
                         audio.tags.add(TRCK(encoding=3, text=f"{track_num}/{total_tracks}")) # Número da Faixa
                         # Poderia adicionar Artista/Álbum do vídeo aqui se desejado
@@ -2334,9 +2412,13 @@ def download_and_split_thread(url, tracks, output_format):
 
     finally:
         # Reabilita botão e para progresso
-        if part_download_button.winfo_exists(): part_download_button.config(state=tk.NORMAL)
-        if part_status_label.winfo_exists(): part_status_label.config(text="Pronto.")
-        if part_progress_bar.winfo_exists(): part_progress_bar.stop(); part_progress_bar['value'] = 0
+        if part_download_button.winfo_exists():
+            part_download_button.config(state=tk.NORMAL)
+        if part_status_label.winfo_exists():
+            part_status_label.config(text="Pronto.")
+        if part_progress_bar.winfo_exists():
+            part_progress_bar.stop()
+            part_progress_bar['value'] = 0
 
 def start_part_download():
     url = part_url_entry.get().strip()
