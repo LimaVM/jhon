@@ -368,22 +368,21 @@ def parse_tracklist(tracklist_text_content):
         else:
             log(f"Formato inválido ou não reconhecido na linha {i+1}: 	'{line}'.", "WARNING")
 
-    # Ordena as faixas pelo tempo inicial para evitar cortes incorretos caso a
-    # lista seja fornecida fora de ordem. Mantemos o nome e outros dados.
-    tracks.sort(key=lambda x: x["start_seconds"])
-
-    # Calcula o tempo final (início da próxima faixa)
+    # Calcula o tempo final usando a ordem fornecida (início da próxima faixa)
+    # O usuário define o início de cada música e o início da próxima é o fim da anterior
     for i in range(len(tracks)):
         if i + 1 < len(tracks):
-            # Garante que o tempo final seja maior que o inicial
-            if tracks[i+1]["start_seconds"] > tracks[i]["start_seconds"]:
-                 tracks[i]["end_seconds"] = tracks[i+1]["start_seconds"]
+            next_start = tracks[i + 1]["start_seconds"]
+            if next_start > tracks[i]["start_seconds"]:
+                tracks[i]["end_seconds"] = next_start
             else:
-                 # Se a próxima faixa começa no mesmo tempo ou antes (erro na lista?), define fim como None
-                 log(f"Tempo da faixa {i+2} ({tracks[i+1]['time_str']}) não é maior que o da faixa {i+1} ({tracks[i]['time_str']}). Verifique a lista.", "WARNING")
-                 tracks[i]["end_seconds"] = None 
+                log(
+                    f"Tempo da faixa {i+2} ({tracks[i+1]['time_str']}) não é maior que o da faixa {i+1} ({tracks[i]['time_str']}). Verifique a lista.",
+                    "WARNING",
+                )
+                tracks[i]["end_seconds"] = None
         else:
-            tracks[i]["end_seconds"] = None # Última faixa vai até o fim do vídeo
+            tracks[i]["end_seconds"] = None  # Última faixa vai até o fim do vídeo
 
     log(f"Lista de faixas processada. {len(tracks)} faixas válidas encontradas.", "SUCCESS" if tracks else "WARNING")
     return tracks
