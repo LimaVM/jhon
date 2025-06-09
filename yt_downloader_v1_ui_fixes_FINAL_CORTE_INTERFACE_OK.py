@@ -316,10 +316,24 @@ def time_str_to_seconds(time_str):
         raise ValueError(f"Formato de tempo inválido: {time_str}")
     return seconds
 
+def seconds_to_time(seconds):
+    """Converte segundos para string HH:MM:SS ou MM:SS."""
+    h = int(seconds) // 3600
+    m = (int(seconds) % 3600) // 60
+    s = int(seconds) % 60
+    if h > 0:
+        return f"{h:02}:{m:02}:{s:02}"
+    return f"{m:02}:{s:02}"
+
 def parse_tracklist(tracklist_text_content):
-    """Analisa o texto da lista de faixas e extrai nome e tempo inicial em segundos.
-       Aceita formatos: [Num.] Nome Faixa HH:MM:SS, [Num.] Nome Faixa MM:SS,
-                       [Num.] HH:MM:SS - Nome Faixa, [Num.] MM:SS - Nome Faixa"""
+    """Analisa a lista de faixas em ordem e ignora tempos fora de sequência.
+
+    Aceita formatos:
+      [Num.] Nome Faixa HH:MM:SS
+      [Num.] Nome Faixa MM:SS
+      [Num.] HH:MM:SS - Nome Faixa
+      [Num.] MM:SS - Nome Faixa
+    """
     tracks = []
     lines = tracklist_text_content.strip().split("\n")
     
@@ -333,6 +347,9 @@ def parse_tracklist(tracklist_text_content):
     # Captura: Nome (grupo 1), Tempo (grupo 2)
     pattern_name_first = re.compile(r"^(?:\d+\s*[.-]?\s*)?(.*?)\s+(\d{1,2}:\d{2}(?::\d{2})?)$", re.IGNORECASE)
 
+    last_start = -1
+    prev_track = None
+
     for i, line in enumerate(lines):
         line = line.strip()
         if not line:
@@ -340,51 +357,53 @@ def parse_tracklist(tracklist_text_content):
 
         name = None
         time_str = None
-        
-        # Tenta Padrão 1 (Tempo - Nome)
+
         match1 = pattern_time_first.match(line)
         if match1:
             time_str = match1.group(1)
             name = match1.group(2)
             log(f"Linha {i+1}: Detectado formato Tempo - Nome.", "INFO")
         else:
-            # Tenta Padrão 2 (Nome Tempo)
             match2 = pattern_name_first.match(line)
             if match2:
                 name = match2.group(1)
                 time_str = match2.group(2)
                 log(f"Linha {i+1}: Detectado formato Nome - Tempo.", "INFO")
 
-        if name is not None and time_str is not None:
-            name = name.strip()
-            time_str = time_str.strip()
-            try:
-                start_seconds = time_str_to_seconds(time_str)
-                sanitized_name = sanitize_filename(name if name else f"Faixa_{i+1}")
-                tracks.append({"name": sanitized_name, "time_str": time_str, "start_seconds": start_seconds})
-                log(f"  -> Faixa encontrada: 	{sanitized_name} 	({time_str} -> {start_seconds}s)", "INFO")
-            except ValueError as e:
-                log(f"Erro ao converter tempo na linha {i+1}: 	'{line}'. 	Erro: {e}", "ERROR")
-        else:
-            log(f"Formato inválido ou não reconhecido na linha {i+1}: 	'{line}'.", "WARNING")
+        if name is None or time_str is None:
+            log(f"Formato inválido ou não reconhecido na linha {i+1}:   '{line}'.", "WARNING")
+            continue
 
-    # Calcula o tempo final usando a ordem fornecida (início da próxima faixa)
-    # O usuário define o início de cada música e o início da próxima é o fim da anterior
-    for i in range(len(tracks)):
-        if i + 1 < len(tracks):
-            next_start = tracks[i + 1]["start_seconds"]
-            if next_start > tracks[i]["start_seconds"]:
-                tracks[i]["end_seconds"] = next_start
-            else:
-                log(
-                    f"Tempo da faixa {i+2} ({tracks[i+1]['time_str']}) não é maior que o da faixa {i+1} ({tracks[i]['time_str']}). Verifique a lista.",
-                    "WARNING",
-                )
-                tracks[i]["end_seconds"] = None
-        else:
-            tracks[i]["end_seconds"] = None  # Última faixa vai até o fim do vídeo
+        name = name.strip()
+        time_str = time_str.strip()
+        try:
+            start_seconds = time_str_to_seconds(time_str)
+        except ValueError as e:
+            log(f"Erro ao converter tempo na linha {i+1}:   '{line}'.      Erro: {e}", "ERROR")
+            continue
 
-    log(f"Lista de faixas processada. {len(tracks)} faixas válidas encontradas.", "SUCCESS" if tracks else "WARNING")
+        if start_seconds <= last_start:
+            log(
+                f"Tempo da faixa {i+1} ({time_str}) não é maior que o tempo anterior ({seconds_to_time(last_start)}). Ignorando.",
+                "WARNING",
+            )
+            continue
+
+        sanitized_name = sanitize_filename(name if name else f"Faixa_{i+1}")
+        track = {"name": sanitized_name, "time_str": time_str, "start_seconds": start_seconds}
+        if prev_track is not None:
+            prev_track["end_seconds"] = start_seconds
+        tracks.append(track)
+        prev_track = track
+        last_start = start_seconds
+
+    if prev_track is not None:
+        prev_track["end_seconds"] = None
+
+    log(
+        f"Lista de faixas processada. {len(tracks)} faixas válidas encontradas.",
+        "SUCCESS" if tracks else "WARNING",
+    )
     return tracks
 
 def sanitize_filename(filename):
