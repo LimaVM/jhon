@@ -307,6 +307,16 @@ def time_str_to_seconds(time_str):
         raise ValueError(f"Formato de tempo inválido: {time_str}")
     return seconds
 
+def seconds_to_time_str(seconds):
+    """Converte segundos para string HH:MM:SS ou MM:SS."""
+    try:
+        seconds = int(seconds)
+    except (TypeError, ValueError):
+        return str(seconds)
+    h, rem = divmod(seconds, 3600)
+    m, s = divmod(rem, 60)
+    return f"{h:02}:{m:02}:{s:02}" if h else f"{m:02}:{s:02}"
+
 def parse_tracklist(tracklist_text_content):
     """Analisa o texto da lista de faixas e extrai nome e tempo inicial em segundos.
        Aceita formatos: [Num.] Nome Faixa HH:MM:SS, [Num.] Nome Faixa MM:SS,
@@ -359,19 +369,23 @@ def parse_tracklist(tracklist_text_content):
         else:
             log(f"Formato inválido ou não reconhecido na linha {i+1}: 	'{line}'.", "WARNING")
 
-    # Ordena as faixas pelo tempo inicial
-    # tracks.sort(key=lambda x: x["start_seconds"])  # ORDEM PRESERVADA
+    # Ordena as faixas pelo tempo inicial para garantir cortes corretos
+    tracks.sort(key=lambda x: x["start_seconds"])
 
     # Calcula o tempo final (início da próxima faixa)
     for i in range(len(tracks)):
         if i + 1 < len(tracks):
             # Garante que o tempo final seja maior que o inicial
-            if tracks[i+1]["start_seconds"] > tracks[i]["start_seconds"]:
-                 tracks[i]["end_seconds"] = tracks[i+1]["start_seconds"]
+            if tracks[i + 1]["start_seconds"] > tracks[i]["start_seconds"]:
+                tracks[i]["end_seconds"] = tracks[i + 1]["start_seconds"]
             else:
-                 # Se a próxima faixa começa no mesmo tempo ou antes (erro na lista?), define fim como None
-                 log(f"Tempo da faixa {i+2} ({tracks[i+1]['time_str']}) não é maior que o da faixa {i+1} ({tracks[i]['time_str']}). Verifique a lista.", "WARNING")
-                 tracks[i]["end_seconds"] = None 
+                # Se a próxima faixa começa no mesmo tempo ou antes (erro na lista?), define fim como None
+                log(
+                    f"Tempo da faixa {i+2} ({seconds_to_time_str(tracks[i + 1]['start_seconds'])}) "
+                    f"não é maior que o da faixa {i+1} ({seconds_to_time_str(tracks[i]['start_seconds'])}). Verifique a lista.",
+                    "WARNING",
+                )
+                tracks[i]["end_seconds"] = None
         else:
             tracks[i]["end_seconds"] = None # Última faixa vai até o fim do vídeo
 
